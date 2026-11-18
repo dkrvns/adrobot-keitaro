@@ -1,0 +1,60 @@
+name: Checks
+
+on:
+  push:
+    branches:
+      - main
+      - 'feat/**'
+      - 'fix/**'
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Check code, migrations and API
+        run: docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-code-from checks
+      - name: Audit runtime dependencies
+        run: |
+          docker compose -f compose.test.yaml run --rm --no-deps checks sh -ec '
+            uv export --quiet --locked --no-dev --no-emit-project -o /tmp/runtime-requirements.txt
+            uv run pip-audit --disable-pip --require-hashes -r /tmp/runtime-requirements.txt
+          '
+      - name: Clean up isolated services
+        if: always()
+        run: docker compose -f compose.test.yaml down --volumes
+
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      KEITARO_URL: https://fixture.example
+      KEITARO_API_KEY: fixture-key
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Check JavaScript syntax
+        run: node --check src/adrobot/presentation/static/app.js
+      - name: Verify runtime startup and static files
+        run: |
+          docker compose up --build -d --wait
+          curl --fail --silent http://127.0.0.1:8000/healthz
+          curl --fail --silent http://127.0.0.1:8000/static/app.js --output /dev/null
+      - name: Exercise campaign creation and editing with Chromium
+        run: docker compose -f compose.test.yaml run --rm --build browser
+      - name: Show startup logs
+        if: failure()
+        run: docker compose logs app migrate
+      - name: Clean up isolated services
+        if: always()
+        run: |
+          docker compose -f compose.test.yaml down --volumes
+          docker compose down --volumes

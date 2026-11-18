@@ -1,0 +1,52 @@
+name: adrobot-test
+
+x-checks: &checks
+  environment:
+    DATABASE_URL: postgresql+psycopg://adrobot_test:adrobot_test@db:5432/adrobot_test
+  depends_on:
+    db:
+      condition: service_healthy
+
+services:
+  db:
+    image: postgres:17-alpine@sha256:a77aa70e641402a21411b92b721c58d10f23b50ae5fdd2333efd22d166e1e5f7
+    environment:
+      POSTGRES_DB: adrobot_test
+      POSTGRES_USER: adrobot_test
+      POSTGRES_PASSWORD: adrobot_test
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U adrobot_test -d adrobot_test]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+  checks:
+    <<: *checks
+    build:
+      context: .
+      target: development
+    command:
+      - sh
+      - -ec
+      - |
+        uv run ruff format --check .
+        uv run ruff check .
+        uv run mypy
+        uv run alembic upgrade head
+        uv run alembic check
+        uv run pytest --ignore=tests/browser_test.py
+        uv run alembic downgrade base
+        uv run alembic upgrade head
+  browser:
+    <<: *checks
+    profiles: [browser]
+    build:
+      context: .
+      target: browser
+    command:
+      - sh
+      - -ec
+      - |
+        uv run alembic upgrade head
+        uv run pytest tests/browser_test.py

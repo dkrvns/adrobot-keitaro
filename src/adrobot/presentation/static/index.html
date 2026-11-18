@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f8fc">
+  <title>Adrobot · Кампании Keitaro</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script type="module" src="/static/app.js"></script>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <a class="brand" href="#campaigns">
+        <span class="brand-icon" aria-hidden="true">↗</span>
+        <span>Adrobot<small>Keitaro</small></span>
+      </a>
+      <nav class="navigation" aria-label="Разделы">
+        <a href="#campaigns" data-section="campaigns"><span class="nav-icon icon-grid" aria-hidden="true"></span>Кампании</a>
+        <a href="#new" data-section="new"><span class="nav-icon icon-plus" aria-hidden="true"></span>Создать кампанию</a>
+      </nav>
+      <a class="api-link" href="/docs" target="_blank" rel="noopener">Документация API <span aria-hidden="true">↗</span></a>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <div id="breadcrumb" class="breadcrumb">Кампании</div>
+        <div id="connection" class="connection" role="status" hidden>
+          <span class="connection-dot" aria-hidden="true"></span>
+          <span class="connection-text"></span>
+        </div>
+      </header>
+      <main id="main" class="main" aria-label="Рабочая область">
+        <p class="empty">Загружаем кампании…</p>
+      </main>
+    </div>
+  </div>
+  <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+  <dialog id="offer-dialog" aria-labelledby="offer-dialog-title">
+    <div class="dialog-header">
+      <h2 id="offer-dialog-title">Добавить оффер</h2>
+      <button class="icon-button" id="close-offer-dialog" type="button" aria-label="Закрыть">×</button>
+    </div>
+    <form id="offer-search-form" class="search-row">
+      <label class="sr-only" for="offer-query">Название или ID оффера</label>
+      <input id="offer-query" type="search" placeholder="Название или ID оффера" maxlength="100" autocomplete="off" autofocus>
+      <button class="button secondary" type="submit">Найти</button>
+    </form>
+    <div id="offer-results" class="offer-results" aria-live="polite"></div>
+  </dialog>
+</body>
+</html>

@@ -1,0 +1,49 @@
+name: adrobot
+
+x-app: &app
+  image: adrobot:local
+  build:
+    context: .
+    target: runtime
+  environment:
+    DATABASE_URL: postgresql+psycopg://adrobot:adrobot@db:5432/adrobot
+    KEITARO_URL: ${KEITARO_URL:-https://tlgk.host}
+    KEITARO_API_KEY: ${KEITARO_API_KEY:-}
+    KEITARO_TIMEZONE: ${KEITARO_TIMEZONE:-Europe/Minsk}
+    CAMPAIGN_PREFIX: ${CAMPAIGN_PREFIX:-test_kryvanos_}
+
+services:
+  db:
+    image: postgres:17-alpine@sha256:a77aa70e641402a21411b92b721c58d10f23b50ae5fdd2333efd22d166e1e5f7
+    environment:
+      POSTGRES_DB: adrobot
+      POSTGRES_USER: adrobot
+      POSTGRES_PASSWORD: adrobot
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U adrobot -d adrobot]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+  migrate:
+    <<: *app
+    command: [uv, run, alembic, upgrade, head]
+    depends_on:
+      db:
+        condition: service_healthy
+  app:
+    <<: *app
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - '127.0.0.1:${APP_PORT:-8000}:8000'
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 6
+
+volumes:
+  pgdata:
